@@ -3,16 +3,36 @@ name: Security CI
 on: [push]
 
 jobs:
+  snyk-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      # Snyk looks for requirement.txt or requirements.txt automatically
+      - name: Run Snyk to check for vulnerabilities
+        uses: snyk/actions/python@master
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        with:
+          command: test # This checks your dependencies
+          args: --severity-threshold=high
+
   trivy-scan:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Run Trivy vulnerability scanner
+      - name: Run Trivy
         uses: aquasecurity/trivy-action@master
         with:
           scan-type: 'fs'
           scan-ref: '.'
           severity: 'CRITICAL,HIGH'
-          exit-code: '1' # This will fail the build if issues are found
+          exit-code: '1'
