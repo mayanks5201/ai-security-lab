@@ -52,3 +52,34 @@ jobs:
           scan-type: 'fs'
           severity: 'CRITICAL,HIGH'
           exit-code: '1'
+
+  zap-scan:
+    runs-on: ubuntu-latest
+    name: OWASP ZAP DAST Scan
+    continue-on-error: true
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Install Dependencies
+        run: |
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+          pip install uvicorn fastapi
+
+      - name: Start FastAPI App
+        run: |
+          uvicorn main:app --host 0.0.0.0 --port 8000 &
+          # Wait for the server to be ready
+          timeout 30s bash -c 'until curl -s localhost:8000; do sleep 1; done'
+
+      - name: OWASP ZAP Baseline Scan
+        uses: zaproxy/action-baseline@v0.12.0
+        with:
+          target: 'http://localhost:8000/'
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fail_action: false
